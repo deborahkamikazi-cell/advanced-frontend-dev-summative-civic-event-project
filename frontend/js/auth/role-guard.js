@@ -9,6 +9,7 @@ import { getCurrentUser } from "../utils/storage.js";
 export function requireRole(allowedRoles = []) {
   const user = getCurrentUser();
   if (!user || !allowedRoles.includes(user.role)) {
+    sessionStorage.setItem("civicevents_access_denied", "Access denied: Administrator privileges are required.");
     window.location.href = APP_CONFIG.DEFAULT_USER_PAGE;
     return false;
   }

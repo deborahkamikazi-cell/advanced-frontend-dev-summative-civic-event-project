@@ -8,17 +8,53 @@
   </head>
   <body class="bg-gray-50 text-gray-900">
     <div id="navbar-slot"></div>
-    <main class="mx-auto max-w-4xl p-4">
-      <section class="rounded border bg-white p-4">
-        <h1 class="text-xl font-semibold">Event Form</h1>
+    <div id="admin-topbar-slot"></div>
+    <main class="mx-auto flex max-w-7xl gap-4 p-4">
+      <div id="admin-sidebar-slot" class="w-full md:w-64"></div>
+      <section class="flex-1 rounded border bg-white p-4">
+        <h1 id="event-form-title" class="text-xl font-semibold">Create Event</h1>
         <form id="event-form" class="mt-4 space-y-4" enctype="multipart/form-data">
-          <input id="title" name="title" type="text" placeholder="Title" class="w-full rounded border px-3 py-2" required />
-          <textarea id="description" name="description" placeholder="Description" class="w-full rounded border px-3 py-2"></textarea>
-          <input id="location" name="location" type="text" placeholder="Location" class="w-full rounded border px-3 py-2" required />
-          <input id="starts_at" name="starts_at" type="datetime-local" class="w-full rounded border px-3 py-2" required />
-          <input id="ends_at" name="ends_at" type="datetime-local" class="w-full rounded border px-3 py-2" required />
-          <input id="image" name="image" type="file" accept=".jpg,.jpeg,.png,.gif" class="w-full rounded border px-3 py-2" />
-          <button type="submit" class="rounded bg-gray-900 px-4 py-2 text-sm text-white">Save event</button>
+          <label class="block text-sm font-medium">
+            Event title
+            <input id="title" name="title" type="text" placeholder="Title" class="ce-input" required />
+          </label>
+          <label class="block text-sm font-medium">
+            Description
+            <textarea id="description" name="description" placeholder="Description" class="ce-input"></textarea>
+          </label>
+          <label class="block text-sm font-medium">
+            Location
+            <input id="location" name="location" type="text" placeholder="Location" class="ce-input" required />
+          </label>
+          <div class="grid gap-4 sm:grid-cols-2">
+            <label class="block text-sm font-medium">
+              Start date & time
+              <input id="starts_at" name="starts_at" type="datetime-local" class="ce-input" required />
+            </label>
+            <label class="block text-sm font-medium">
+              End date & time
+              <input id="ends_at" name="ends_at" type="datetime-local" class="ce-input" required />
+            </label>
+          </div>
+          <label class="block text-sm font-medium">
+            Cover image
+            <input id="image" name="image" type="file" accept=".jpg,.jpeg,.png,.gif" class="ce-input" />
+          </label>
+          <img id="event-image-preview" alt="Event image preview" class="hidden h-40 w-full rounded-lg object-cover" loading="lazy" />
+          <div class="grid gap-4 sm:grid-cols-2">
+            <label class="block text-sm font-medium">
+              Color theme
+              <input id="theme" name="theme" type="number" min="0" max="360" step="1" value="210" class="ce-input" />
+            </label>
+            <label class="mt-7 inline-flex items-center gap-2 text-sm">
+              <input id="published" name="published" type="checkbox" checked />
+              Published
+            </label>
+          </div>
+          <div class="flex gap-2">
+            <button type="submit" class="ce-btn-primary">Save event</button>
+            <a href="/pages/admin/manage-events.html" class="ce-btn-secondary">Cancel</a>
+          </div>
         </form>
       </section>
     </main>

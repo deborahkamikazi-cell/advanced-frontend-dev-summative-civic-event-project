@@ -1,205 +1,113 @@
-# CivicEvents+ Frontend
+# CivicEvents+ Frontend (Mock Implementation)
 
 ## Overview
-This folder contains the frontend scaffold for the **CivicEvents+ Event Management Platform** assignment.
-It is organized for implementation using:
-
+This frontend implements the CivicEvents+ UI using your Cloud Studio design language with:
 - HTML5
 - Tailwind CSS
 - jQuery
-- Vanilla JavaScript (modular files)
+- Modular JavaScript
 
-The backend API is expected at `http://localhost:4000/api` (based on backend documentation and server configuration).
+Current mode is **mock-data only** (no backend integration yet). All interactions are simulated and persisted in browser storage.
 
----
+## Tech Stack
+- Tailwind CSS (`css/input.css` → `css/output.css`)
+- jQuery for DOM interactions
+- ES modules for page logic, guards, and shared utilities
 
-## Frontend Technologies
-- **HTML5** for semantic page structure
-- **Tailwind CSS** for styling utilities
-- **jQuery** for DOM/event handling and AJAX transport
-- **ES Modules** for reusable JavaScript architecture
-
----
-
-## Folder Structure
+## Project Structure
 ```text
 frontend/
 ├── index.html
-├── README.md
-├── package.json
-├── tailwind.config.js
-├── assets/
-│   ├── images/
-│   ├── icons/
-│   └── media/
+├── pages/
+│   ├── auth/...
+│   ├── user/...
+│   └── admin/...
 ├── components/
 │   ├── navbar.html
-│   ├── footer.html
 │   ├── admin-sidebar.html
+│   ├── admin-topbar.html
+│   ├── footer.html
 │   ├── notification-drawer.html
-│   └── loading.html
+│   ├── modal.html
+│   └── toasts.html
 ├── css/
 │   ├── input.css
 │   └── output.css
-├── pages/
-│   ├── auth/
-│   ├── user/
-│   └── admin/
 └── js/
+    ├── auth/                 # auth + guards
+    ├── mock/                 # mock datasets + state + mock client
+    ├── pages/                # page-level scripts
+    ├── services/             # reserved for backend integration later
     ├── config/
-    ├── services/
-    ├── auth/
-    ├── pages/
     └── utils/
 ```
 
----
-
-## Setup
-From this `frontend/` directory:
+## Setup & Run
+From `frontend/`:
 
 1. Install dependencies:
    ```bash
    npm install
    ```
-
-2. Build Tailwind CSS once:
+2. Build Tailwind CSS:
    ```bash
    npm run build:css
    ```
-
-3. Or run Tailwind in watch mode:
+3. (Optional) Watch Tailwind while editing:
    ```bash
    npm run dev:css
    ```
-
-4. Start a local static server:
+4. Start local static server:
    ```bash
    npm run start
    ```
 
----
+## Mock Accounts (Login)
+- **Admin**
+  - Email: `admin@mail.rw`
+  - Password: `Password123@`
+- **User**
+  - Email: `aline@mail.rw`
+  - Password: `Password123@`
 
-## Tailwind CSS
-- Source file: `css/input.css`
-- Output file: `css/output.css`
-- Config: `tailwind.config.js`
+You can also create new users from signup.
 
-The current `output.css` is a placeholder until you run `npm run build:css` or `npm run dev:css`.
+## How Mock Data Works
+- Persistent app data: `localStorage` key `civicevents_mock_db_v1`
+- Session auth state: `sessionStorage`
+- Mock datasets include users, events, announcements, promos, notifications, registrations, feedback, and dashboard stats.
 
----
+This enables:
+- Event registration/cancellation
+- Admin CRUD-style management (events, announcements, promos, notifications)
+- User enable/disable
+- Notification read state
+- Profile updates (full name/email)
 
-## Backend API Base URL Configuration
-Centralized in:
+## Authentication & Guards
+- `js/auth/auth.js`: mock login/signup/logout session flow
+- `js/auth/auth-guard.js`: redirects unauthenticated users to login
+- `js/auth/role-guard.js`: blocks non-admins from admin routes
 
-- `js/config/config.js`
+Frontend checks are for UX demonstration; backend authorization will enforce security later.
 
-```js
-API_BASE_URL: "http://localhost:4000/api"
-```
+## UI System
+- Shared shells load reusable components dynamically:
+  - Public/user shell: navbar + drawer + footer
+  - Admin shell: sidebar + topbar + footer
+- Global modal and toast components are shared across pages.
+- Tailwind theme tokens match Cloud Studio palette (navy/royal/amber) and Inter typography.
 
-Change this in one place when backend host/port changes.
+## Testing Checklist
+1. Open all auth, user, and admin pages.
+2. Verify navigation links, mobile nav, dropdowns, and sidebar.
+3. Test login with both roles and role-based redirects.
+4. Test signup validation and password strength meter.
+5. Test events search/filter/pagination/register/cancel/feedback.
+6. Test admin create/edit/delete/publish flows.
+7. Test notifications read states and drawer behavior.
+8. Test profile update (full name/email only).
+9. Confirm no console errors and no missing assets.
 
----
-
-## Authentication Flow (Frontend)
-- Login and signup requests go through `js/services/auth.service.js`.
-- Token and user are stored in **sessionStorage** via `js/utils/storage.js`.
-- Auth guard:
-  - `js/auth/auth-guard.js` enforces authenticated pages.
-  - `js/auth/role-guard.js` enforces admin-only pages (`role === "admin"`).
-- Logout clears session storage and redirects to login.
-
-> Note: Frontend role checks are for UX only. Real security is enforced by backend authorization.
-
----
-
-## API Communication Pattern
-- Shared AJAX layer: `js/services/api.js`
-- Automatically attaches `Authorization: Bearer <token>` to protected requests.
-- Handles:
-  - JSON payloads (`application/json`)
-  - Multipart uploads using `FormData` (without manually setting multipart content-type)
-- Global behavior:
-  - `401`: clears session and redirects to login
-  - `403`: displays access denied message
-  - Network/timeouts: normalized errors for UI handling
-
----
-
-## Backend Endpoint Mapping (Verified)
-All routes are under `/api`.
-
-### Auth
-- `POST /auth/signup`
-- `POST /auth/login`
-
-### Users
-- `GET /users` (admin)
-- `GET /users/:id` (admin)
-- `PATCH /users/:id/enable` (admin)
-- `PATCH /users/:id/disable` (admin)
-- `GET /users/profile/me`
-- `PATCH /users/profile/me` (full_name/email only)
-
-### Events
-- `GET /events`
-- `GET /events/:id`
-- `POST /events` (admin, multipart field: `image`)
-- `PUT /events/:id` (admin, multipart field: `image`)
-- `DELETE /events/:id` (admin)
-
-### Event Registrations
-- `POST /event-registrations/register` (body: `event_id`)
-- `POST /event-registrations/cancel` (body: `event_id`)
-- `GET /event-registrations/my-registrations`
-- `GET /event-registrations/event/:event_id/attendees` (admin)
-
-### Event Feedback
-- `POST /event-feedback`
-- `PUT /event-feedback/:id`
-- `GET /event-feedback/my-feedback`
-- `GET /event-feedback/event/:event_id` (admin)
-
-### Announcements
-- `GET /announcements`
-- `GET /announcements/:id`
-- `POST /announcements` (admin, multipart field: `audio`)
-- `PUT /announcements/:id` (admin)
-- `PATCH /announcements/:id/publish` (admin)
-- `PATCH /announcements/:id/unpublish` (admin)
-- `DELETE /announcements/:id` (admin)
-
-### Promos
-- `GET /promos`
-- `GET /promos/:id`
-- `POST /promos` (admin, multipart field: `video`)
-- `PUT /promos/:id` (admin, multipart field: `video`)
-- `PATCH /promos/:id/publish` (admin)
-- `PATCH /promos/:id/unpublish` (admin)
-- `DELETE /promos/:id` (admin)
-
-### Notifications
-- `GET /notifications`
-- `GET /notifications/:id`
-- `DELETE /notifications/:id` (admin)
-
-### Dashboard
-- `GET /dashboard/admin` (admin)
-- `GET /dashboard/me` (authenticated user)
-
----
-
-## Known Backend Clarifications Needed
-1. **Announcement update + audio upload**  
-   Route accepts multipart audio upload, but update controller currently updates from `req.body` only.  
-   If audio replacement is required, backend behavior should be clarified/updated.
-
-2. **Published-only filtering**  
-   Assignment requires browsing published content, but current list endpoints return full datasets unless backend query filtering is added.
-
-3. **Promo captions file upload**  
-   Backend stores `caption_text`; no dedicated caption file upload endpoint/field is currently implemented.
-
-4. **Notification unread status updates**  
-   Notifications table has `read` field, but no explicit endpoint for marking notifications as read was found.
+## Backend Integration (Later)
+Service files in `js/services/` are kept for the later API integration stage.

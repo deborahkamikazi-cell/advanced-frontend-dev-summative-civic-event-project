@@ -3,6 +3,13 @@ import { validateEmail, validateRequired } from "../utils/validation.js";
 import { showError } from "../utils/notifications.js";
 import { redirectAfterLogin } from "./_shared.js";
 
+$("#toggle-password-login").on("click", () => {
+  const $password = $("#password");
+  const isPassword = $password.attr("type") === "password";
+  $password.attr("type", isPassword ? "text" : "password");
+  $("#toggle-password-login").text(isPassword ? "Hide" : "Show");
+});
+
 $("#login-form").on("submit", async (event) => {
   event.preventDefault();
   const email = $("#email").val().trim();

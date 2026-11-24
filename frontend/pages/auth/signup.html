@@ -7,24 +7,44 @@
     <link rel="stylesheet" href="../../css/output.css" />
   </head>
   <body class="min-h-screen bg-gray-50 text-gray-900">
-    <main class="mx-auto flex min-h-screen max-w-md items-center justify-center p-4">
-      <section class="w-full rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-        <h1 class="mb-4 text-xl font-semibold">Create Account</h1>
-        <form id="signup-form" class="space-y-4" novalidate>
-          <div>
-            <label for="full_name" class="mb-1 block text-sm font-medium">Full name</label>
-            <input id="full_name" name="full_name" type="text" class="w-full rounded border px-3 py-2" required />
-          </div>
-          <div>
-            <label for="email" class="mb-1 block text-sm font-medium">Email</label>
-            <input id="email" name="email" type="email" class="w-full rounded border px-3 py-2" required />
-          </div>
-          <div>
-            <label for="password" class="mb-1 block text-sm font-medium">Password</label>
-            <input id="password" name="password" type="password" class="w-full rounded border px-3 py-2" required />
-            <p id="password-strength" class="mt-1 text-xs text-gray-500" aria-live="polite"></p>
-          </div>
-          <button type="submit" class="w-full rounded bg-gray-900 px-4 py-2 text-sm text-white">Sign up</button>
+    <main class="min-h-screen lg:grid lg:grid-cols-2">
+      <section class="hidden flex-col justify-end p-12 text-white lg:flex" style="background:linear-gradient(160deg,#172554,#2563EB 70%,#F59E0B)">
+        <div class="text-6xl">📝</div>
+        <h2 class="mt-4 text-3xl font-bold">Join CivicEvents+ today.</h2>
+        <p class="mt-2 text-blue-100">Create your account and start participating in local civic activities.</p>
+      </section>
+      <section class="flex items-center justify-center p-6">
+        <form id="signup-form" class="w-full max-w-sm space-y-4" novalidate>
+          <a href="/index.html" class="mb-2 inline-flex items-center gap-2 text-lg font-bold text-navy">
+            <span class="grid h-8 w-8 place-items-center rounded-full bg-royal text-white">C</span>
+            CivicEvents<span class="text-amber">+</span>
+          </a>
+          <h1 class="text-2xl font-bold text-navy">Create your account</h1>
+          <label class="block text-sm font-medium">
+            Full name
+            <input id="full_name" name="full_name" type="text" class="ce-input" required />
+          </label>
+          <label class="block text-sm font-medium">
+            Email
+            <input id="email" name="email" type="email" class="ce-input" required />
+          </label>
+          <label class="block text-sm font-medium">
+            Password
+            <div class="relative">
+              <input id="password" name="password" type="password" class="ce-input pr-16" required />
+              <button type="button" id="toggle-password-signup" class="absolute right-3 top-3 text-xs text-royal">Show</button>
+            </div>
+            <div class="mt-2 h-1.5 rounded bg-slate-200">
+              <div id="password-meter" class="h-1.5 w-0 rounded bg-red-600 transition-all"></div>
+            </div>
+            <p id="password-strength" class="mt-1 text-xs text-slate-500" aria-live="polite"></p>
+          </label>
+          <label class="block text-sm font-medium">
+            Confirm password
+            <input id="confirm_password" name="confirm_password" type="password" class="ce-input" required />
+          </label>
+          <button type="submit" class="ce-btn-primary w-full text-center">Sign up</button>
+          <p class="text-center text-sm">Have an account? <a href="/pages/auth/login.html" class="font-medium text-royal">Log in</a></p>
         </form>
       </section>
     </main>

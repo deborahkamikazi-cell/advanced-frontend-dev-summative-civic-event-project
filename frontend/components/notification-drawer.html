@@ -1,6 +1,12 @@
-<aside class="rounded border border-gray-200 bg-white p-4" aria-label="Notifications">
-  <h2 class="mb-3 text-sm font-semibold text-gray-900">Notifications</h2>
-  <div id="notification-drawer-list" class="space-y-2 text-sm text-gray-600">
-    <p>No notifications loaded.</p>
-  </div>
-</aside>
+<div id="notification-drawer-overlay" class="fixed inset-0 z-[55] hidden bg-black/30">
+  <aside id="notification-drawer-panel" class="absolute inset-y-0 right-0 w-80 max-w-full overflow-y-auto bg-white p-4 shadow-xl">
+    <div class="mb-3 flex items-center justify-between">
+      <h2 class="font-semibold">Notifications</h2>
+      <button id="notification-drawer-close" aria-label="Close notifications drawer">✕</button>
+    </div>
+    <div id="notification-drawer-list" class="space-y-2 text-sm text-slate-600">
+      <p>No notifications loaded.</p>
+    </div>
+    <a href="/pages/user/notifications.html" class="ce-btn-primary mt-3 w-full text-center">View all</a>
+  </aside>
+</div>

@@ -8,15 +8,46 @@
   </head>
   <body class="bg-gray-50 text-gray-900">
     <div id="navbar-slot"></div>
-    <main class="mx-auto max-w-4xl p-4">
-      <section class="rounded border bg-white p-4">
-        <h1 class="text-xl font-semibold">Promo Form</h1>
+    <div id="admin-topbar-slot"></div>
+    <main class="mx-auto flex max-w-7xl gap-4 p-4">
+      <div id="admin-sidebar-slot" class="w-full md:w-64"></div>
+      <section class="flex-1 rounded border bg-white p-4">
+        <h1 id="promo-form-title" class="text-xl font-semibold">Create Promo</h1>
         <form id="promo-form" class="mt-4 space-y-4" enctype="multipart/form-data">
-          <input id="title" name="title" type="text" placeholder="Title" class="w-full rounded border px-3 py-2" required />
-          <textarea id="description" name="description" placeholder="Description" class="w-full rounded border px-3 py-2" required></textarea>
-          <textarea id="caption_text" name="caption_text" placeholder="Caption text" class="w-full rounded border px-3 py-2" required></textarea>
-          <input id="video" name="video" type="file" accept=".mp4,.mov,.avi,.mkv" class="w-full rounded border px-3 py-2" />
-          <button type="submit" class="rounded bg-gray-900 px-4 py-2 text-sm text-white">Save promo</button>
+          <label class="block text-sm font-medium">
+            Promo title
+            <input id="title" name="title" type="text" placeholder="Title" class="ce-input" required />
+          </label>
+          <label class="block text-sm font-medium">
+            Description
+            <textarea id="description" name="description" placeholder="Description" class="ce-input" required></textarea>
+          </label>
+          <label class="block text-sm font-medium">
+            Caption text
+            <textarea id="caption_text" name="caption_text" placeholder="Caption text" class="ce-input" required></textarea>
+          </label>
+          <label class="block text-sm font-medium">
+            Transcript / accessibility notes
+            <textarea id="transcript" name="transcript" class="ce-input"></textarea>
+          </label>
+          <label class="block text-sm font-medium">
+            Video file
+            <input id="video" name="video" type="file" accept=".mp4,.mov,.avi,.mkv" class="ce-input" />
+          </label>
+          <div class="grid gap-4 sm:grid-cols-2">
+            <label class="block text-sm font-medium">
+              Color theme
+              <input id="theme" name="theme" type="number" min="0" max="360" step="1" value="210" class="ce-input" />
+            </label>
+            <label class="mt-7 inline-flex items-center gap-2 text-sm">
+              <input id="published" name="published" type="checkbox" checked />
+              Published
+            </label>
+          </div>
+          <div class="flex gap-2">
+            <button type="submit" class="ce-btn-primary">Save promo</button>
+            <a href="/pages/admin/manage-promos.html" class="ce-btn-secondary">Cancel</a>
+          </div>
         </form>
       </section>
     </main>
