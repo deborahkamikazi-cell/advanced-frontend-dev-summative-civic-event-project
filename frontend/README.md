@@ -93,6 +93,16 @@ Open the exact URL printed by the server, for example `http://localhost:3000/pag
 7. Check dashboard totals and generated notifications after creating content. Test deletion only on disposable records; notification deletion also affects other broadcast recipients.
 8. Test a normal user's direct admin URL (redirect/access denied) and an expired session (login redirect). Stop the API temporarily to check error/retry states.
 
+### Record an announcement
+1. As an admin, open Create announcement and enter its title.
+2. Click **Record audio** and allow microphone access. Use localhost or HTTPS; recording needs a browser supporting Web Audio/AudioWorklet.
+3. Click **Stop recording**. Listen to the audio preview, then click **Save announcement** to upload it. Recording does not publish or upload until Save is clicked.
+4. Use **Record audio** again to replace the unsaved take, or **Clear audio** to discard it. Alternatively, use **Choose File** to upload an existing MP3, WAV, M4A or OGG.
+
+Recordings are encoded as real mono PCM WAV, not renamed WebM files, and stop automatically at the backend's 5 MB limit. Duration is calculated locally for preview; transcripts and duration cannot be stored by this API. Existing announcement audio still cannot be replaced. Microphone tracks stop when recording ends or the page closes. No transcription service is used.
+
+Run the recording format/size tests with `node --test tests/audio-recorder.test.mjs` from `frontend/`.
+
 ## How Mock Data Works
 - Persistent app data: `localStorage` key `civicevents_mock_db_v1`
 - Session auth state: `sessionStorage`

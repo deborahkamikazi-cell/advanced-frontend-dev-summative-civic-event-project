@@ -20,18 +20,33 @@
           </label>
           <label class="block text-sm font-medium">
             Audio duration (MM:SS)
-            <input id="duration" name="duration" type="text" class="ce-input" disabled aria-describedby="announcement-api-note" />
+            <input id="duration" name="duration" type="text" class="ce-input" readonly aria-describedby="announcement-api-note" />
           </label>
           <label class="block text-sm font-medium">
             Audio file
             <input id="audio" name="audio" type="file" accept=".mp3,.wav,.m4a,.ogg" class="ce-input" aria-describedby="audio-help" />
           </label>
           <p id="audio-help" class="text-sm text-slate-500">Required for new announcements. MP3, WAV, M4A or OGG, up to 5 MB.</p>
+          <section id="audio-recorder" class="ce-card space-y-3 p-4" aria-labelledby="audio-recorder-title">
+            <h2 id="audio-recorder-title" class="text-sm font-semibold">Or record your announcement</h2>
+            <p class="text-sm text-slate-500">Allow microphone access, record your voice, then stop and listen before saving. Recording stops automatically at the 5 MB upload limit.</p>
+            <div class="flex flex-wrap gap-2">
+              <button id="audio-record-start" type="button" class="ce-btn-secondary" disabled>Record audio</button>
+              <button id="audio-record-stop" type="button" class="ce-btn-danger" disabled>Stop recording</button>
+              <button id="audio-record-clear" type="button" class="ce-btn-secondary" disabled>Clear audio</button>
+            </div>
+            <p id="audio-record-status" class="text-sm text-slate-600" role="status" aria-live="polite">No recording yet.</p>
+            <p id="audio-record-error" class="text-sm text-red-600" role="alert"></p>
+          </section>
+          <div id="audio-preview-container" class="hidden space-y-2">
+            <p id="audio-preview-name" class="text-sm text-slate-600"></p>
+            <audio id="audio-preview" controls preload="metadata" class="w-full" aria-label="Announcement audio preview"></audio>
+          </div>
           <label class="block text-sm font-medium">
             Transcript
             <textarea id="transcript" name="transcript" rows="5" class="ce-input" disabled aria-describedby="announcement-api-note"></textarea>
           </label>
-          <p id="announcement-api-note" class="text-sm text-slate-500">The current API does not store duration or transcripts.</p>
+          <p id="announcement-api-note" class="text-sm text-slate-500">Duration is calculated for preview only. The current API stores the audio file, but does not store duration or transcripts.</p>
           <label class="inline-flex items-center gap-2 text-sm">
             <input id="published" name="published" type="checkbox" checked />
             Published
