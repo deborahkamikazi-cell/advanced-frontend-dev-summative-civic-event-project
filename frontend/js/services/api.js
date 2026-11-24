@@ -9,7 +9,7 @@ function buildAjaxConfig({ method, endpoint, data, requiresAuth = true }) {
     url: `${APP_CONFIG.API_BASE_URL}${endpoint}`,
     method,
     dataType: "json",
-    timeout: 20000
+    timeout: APP_CONFIG.API_TIMEOUT_MS
   };
 
   if (requiresAuth && token) {
@@ -33,7 +33,9 @@ function buildAjaxConfig({ method, endpoint, data, requiresAuth = true }) {
 }
 
 function normalizeError(jqXHR, textStatus) {
-  const fallbackMessage = textStatus === "timeout" ? "Request timed out. Please try again." : "Request failed.";
+  const fallbackMessage = textStatus === "timeout"
+    ? "Request timed out. Please try again."
+    : "Network request failed. Please check your connection and try again.";
   const payload = jqXHR.responseJSON || {};
   return {
     status: jqXHR.status || 0,
@@ -42,8 +44,8 @@ function normalizeError(jqXHR, textStatus) {
   };
 }
 
-function handleGlobalHttpErrors(error) {
-  if (error.status === 401) {
+function handleGlobalHttpErrors(error, { requiresAuth }) {
+  if (error.status === 401 && requiresAuth) {
     clearSession();
     window.location.href = APP_CONFIG.LOGIN_PAGE;
     return;
@@ -63,7 +65,7 @@ export function request({ method = "GET", endpoint, data, requiresAuth = true })
       .done((response) => resolve(response))
       .fail((jqXHR, textStatus) => {
         const error = normalizeError(jqXHR, textStatus);
-        handleGlobalHttpErrors(error);
+        handleGlobalHttpErrors(error, { requiresAuth });
         reject(error);
       });
   });

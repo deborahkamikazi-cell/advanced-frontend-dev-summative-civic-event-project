@@ -20,22 +20,24 @@
           </label>
           <label class="block text-sm font-medium">
             Audio duration (MM:SS)
-            <input id="duration" name="duration" type="text" value="2:00" class="ce-input" />
+            <input id="duration" name="duration" type="text" class="ce-input" disabled aria-describedby="announcement-api-note" />
           </label>
           <label class="block text-sm font-medium">
             Audio file
-            <input id="audio" name="audio" type="file" accept=".mp3,.wav,.m4a,.ogg" class="ce-input" />
+            <input id="audio" name="audio" type="file" accept=".mp3,.wav,.m4a,.ogg" class="ce-input" aria-describedby="audio-help" />
           </label>
+          <p id="audio-help" class="text-sm text-slate-500">Required for new announcements. MP3, WAV, M4A or OGG, up to 5 MB.</p>
           <label class="block text-sm font-medium">
             Transcript
-            <textarea id="transcript" name="transcript" rows="5" class="ce-input"></textarea>
+            <textarea id="transcript" name="transcript" rows="5" class="ce-input" disabled aria-describedby="announcement-api-note"></textarea>
           </label>
+          <p id="announcement-api-note" class="text-sm text-slate-500">The current API does not store duration or transcripts.</p>
           <label class="inline-flex items-center gap-2 text-sm">
             <input id="published" name="published" type="checkbox" checked />
             Published
           </label>
           <div class="flex gap-2">
-            <button type="submit" class="ce-btn-primary">Save announcement</button>
+            <button type="submit" class="ce-btn-primary" disabled>Save announcement</button>
             <a href="/pages/admin/manage-announcements.html" class="ce-btn-secondary">Cancel</a>
           </div>
         </form>

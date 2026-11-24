@@ -28,7 +28,7 @@
           </label>
           <label class="block text-sm font-medium">
             Transcript / accessibility notes
-            <textarea id="transcript" name="transcript" class="ce-input"></textarea>
+            <textarea id="transcript" name="transcript" class="ce-input" disabled aria-describedby="promo-api-note"></textarea>
           </label>
           <label class="block text-sm font-medium">
             Video file
@@ -37,15 +37,16 @@
           <div class="grid gap-4 sm:grid-cols-2">
             <label class="block text-sm font-medium">
               Color theme
-              <input id="theme" name="theme" type="number" min="0" max="360" step="1" value="210" class="ce-input" />
+              <input id="theme" name="theme" type="number" min="0" max="360" step="1" value="210" class="ce-input" disabled aria-describedby="promo-api-note" />
             </label>
             <label class="mt-7 inline-flex items-center gap-2 text-sm">
               <input id="published" name="published" type="checkbox" checked />
               Published
             </label>
           </div>
+          <p id="promo-api-note" class="text-sm text-slate-500">Video: MP4, MOV, AVI or MKV, up to 8 MB (MP4 recommended for browsers). The API stores caption text, not caption files, transcripts or color themes. New promos are initially published by the API; saving as draft uses a separate unpublish request.</p>
           <div class="flex gap-2">
-            <button type="submit" class="ce-btn-primary">Save promo</button>
+            <button type="submit" class="ce-btn-primary" disabled>Save promo</button>
             <a href="/pages/admin/manage-promos.html" class="ce-btn-secondary">Cancel</a>
           </div>
         </form>

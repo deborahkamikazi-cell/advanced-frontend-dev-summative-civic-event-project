@@ -5,17 +5,20 @@ import { cancelRegistration, getUserRegistrations } from "../mock/mock-client.js
 import { formatDateLabel, coverGradient, sectionHeader } from "./user-ui.js";
 import { openConfirmModal, showSuccess } from "../utils/notifications.js";
 import { withIdParam } from "../utils/route.js";
+import { cancelEventRegistration, getMyRegistrations } from "../services/registrations.service.js";
+
+let registrations = [];
+let isApiMode = false;
 
 function renderRegistrations() {
-  const items = getUserRegistrations();
-  if (!items.length) {
+  if (!registrations.length) {
     setEmptyState("#registrations-feed", "You have no active registrations.");
     return;
   }
 
   $("#registrations-feed").html(`
     <div class="space-y-4">
-      ${items.map((item) => `
+      ${registrations.map((item) => `
         <article class="ce-card overflow-hidden sm:flex">
           ${coverGradient(item.event.image_theme, "h-28 sm:h-auto sm:w-48")}
           <div class="flex flex-1 flex-wrap items-center justify-between gap-3 p-4">
@@ -39,6 +42,25 @@ if (enforcePageAccess()) {
   await loadPublicShell("../../components");
   setLoadingState("#registrations-list", true);
   try {
+    try {
+      const response = await getMyRegistrations();
+      registrations = (response?.data || [])
+        .filter((item) => item.status === "registered")
+        .map((item) => ({
+          event: {
+            id: item.event_id,
+            title: item.title,
+            starts_at: item.starts_at,
+            location: item.location,
+            image_theme: 210
+          }
+        }));
+      isApiMode = true;
+    } catch {
+      registrations = getUserRegistrations();
+      isApiMode = false;
+    }
+
     $("#registrations-list").html(sectionHeader("My Registrations", "Events you have signed up for."));
     $("#registrations-list").append('<section id="registrations-feed"></section>');
     renderRegistrations();
@@ -54,9 +76,18 @@ $(document).on("click", ".registration-cancel-btn", (event) => {
     message: "This event will be removed from your registrations.",
     confirmLabel: "Cancel registration",
     onConfirm: () => {
-      cancelRegistration(eventId);
-      showSuccess("Registration cancelled.");
-      renderRegistrations();
+      const handler = async () => {
+        if (isApiMode) {
+          await cancelEventRegistration(eventId);
+          registrations = registrations.filter((item) => item.event.id !== eventId);
+        } else {
+          cancelRegistration(eventId);
+          registrations = getUserRegistrations();
+        }
+        showSuccess("Registration cancelled.");
+        renderRegistrations();
+      };
+      handler().catch((error) => setErrorState("#registrations-list", error.message || "Unable to cancel registration."));
     }
   });
 });

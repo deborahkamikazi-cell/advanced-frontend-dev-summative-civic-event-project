@@ -1,16 +1,25 @@
 import { enforcePageAccess } from "../auth/auth-guard.js";
-import { getUserNotifications, markAllNotificationsRead, markNotificationRead } from "../mock/mock-client.js";
+import { getUserNotifications } from "../mock/mock-client.js";
 import { loadPublicShell } from "./_shared.js";
 import { setEmptyState, setErrorState, setLoadingState } from "../utils/ui.js";
 import { sectionHeader } from "./user-ui.js";
 import { showSuccess } from "../utils/notifications.js";
+import { listNotifications } from "../services/notifications.service.js";
+import {
+  isNotificationRead,
+  markAllNotificationsReadLocal,
+  markNotificationReadLocal,
+  normalizeNotification
+} from "../utils/notification-state.js";
+
+let notificationItems = [];
 
 function notificationBadge(type) {
   return `<span class="rounded-full bg-amber/20 px-2 py-0.5 text-xs font-medium text-amber-800">${type}</span>`;
 }
 
 function renderNotifications(type = "All") {
-  const notifications = getUserNotifications()
+  const notifications = notificationItems
     .filter((item) => type === "All" || item.type === type);
 
   if (!notifications.length) {
@@ -34,6 +43,21 @@ function renderNotifications(type = "All") {
   `);
 }
 
+async function loadNotifications() {
+  try {
+    const response = await listNotifications();
+    notificationItems = (response?.data || [])
+      .map(normalizeNotification)
+      .filter(Boolean)
+      .map((item) => ({ ...item, read: isNotificationRead(item) }));
+  } catch {
+    notificationItems = getUserNotifications()
+      .map(normalizeNotification)
+      .filter(Boolean)
+      .map((item) => ({ ...item, read: isNotificationRead(item) }));
+  }
+}
+
 if (enforcePageAccess()) {
   await loadPublicShell("../../components");
   setLoadingState("#notifications-list", true);
@@ -45,6 +69,7 @@ if (enforcePageAccess()) {
       </div>
       <section id="notifications-feed"></section>
     `);
+    await loadNotifications();
     renderNotifications();
   } catch (error) {
     setErrorState("#notifications-list", error.message);
@@ -59,7 +84,8 @@ $(document).on("click", ".notification-filter", (event) => {
 });
 
 $(document).on("click", "#mark-all-read-btn", () => {
-  markAllNotificationsRead();
+  markAllNotificationsReadLocal(notificationItems.map((item) => item.id));
+  notificationItems = notificationItems.map((item) => ({ ...item, read: true }));
   showSuccess("All notifications marked as read.");
   const activeType = $(".notification-filter.bg-navy").data("type") || "All";
   renderNotifications(activeType);
@@ -67,5 +93,6 @@ $(document).on("click", "#mark-all-read-btn", () => {
 
 $(document).on("click", ".notification-item", (event) => {
   const notificationId = $(event.currentTarget).data("notificationId");
-  markNotificationRead(notificationId);
+  markNotificationReadLocal(notificationId);
+  notificationItems = notificationItems.map((item) => item.id === notificationId ? { ...item, read: true } : item);
 });

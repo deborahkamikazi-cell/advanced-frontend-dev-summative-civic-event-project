@@ -4,12 +4,20 @@ import { loadPublicShell } from "./_shared.js";
 import { setEmptyState, setErrorState, setLoadingState } from "../utils/ui.js";
 import { coverGradient, formatShortDate, sectionHeader } from "./user-ui.js";
 import { withIdParam } from "../utils/route.js";
+import { listPromos } from "../services/promos.service.js";
 
 if (enforcePageAccess()) {
   await loadPublicShell("../../components", { activeNav: "promos" });
   setLoadingState("#promos-list", true);
   try {
-    const items = getPromos();
+    let items = [];
+    try {
+      const response = await listPromos();
+      items = (response?.data || []).filter((item) => item.published !== false);
+    } catch {
+      items = getPromos();
+    }
+
     if (!items.length) {
       setEmptyState("#promos-list", "No promos available.");
     } else {
@@ -19,7 +27,9 @@ if (enforcePageAccess()) {
           ${items.map((item) => `
             <article class="ce-card overflow-hidden">
               <a href="${withIdParam("/pages/user/promo-details.html", item.id)}" class="relative block">
-                ${coverGradient(item.theme, "h-36")}
+                ${item.video_url
+                  ? `<video class="h-36 w-full object-cover" src="${item.video_url}" preload="metadata" muted></video>`
+                  : coverGradient(item.theme, "h-36")}
                 <span class="absolute inset-0 grid place-items-center">
                   <span class="grid h-12 w-12 place-items-center rounded-full bg-white/90">▶</span>
                 </span>

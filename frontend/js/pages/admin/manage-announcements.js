@@ -1,122 +1,117 @@
 import { enforcePageAccess } from "../../auth/auth-guard.js";
 import { loadAdminShell } from "../_shared.js";
-import { setErrorState, setLoadingState } from "../../utils/ui.js";
 import { validateFile } from "../../utils/validation.js";
 import { openConfirmModal, showError, showSuccess } from "../../utils/notifications.js";
-import { createAdminAnnouncement, deleteAdminAnnouncement, getAllAnnouncements, getAnnouncementById, setAnnouncementPublished, updateAdminAnnouncement } from "../../mock/mock-client.js";
-import { adminPageHeader, dataRow, statusBadge, tableMarkup } from "./admin-ui.js";
+import { createAnnouncement, deleteAnnouncement, getAnnouncementById, listAnnouncements, publishAnnouncement, unpublishAnnouncement, updateAnnouncement } from "../../services/announcements.service.js";
+import { ADMIN_PAGE_SIZE, adminPageHeader, dataRow, escapeHtml, loadAdminData, paginationMarkup, runAdminAction, statusBadge, tableMarkup } from "./admin-ui.js";
 import { getLocationParam, isPathPage, withIdParam } from "../../utils/route.js";
 
-function isListPage() {
-  return isPathPage("manage-announcements");
-}
+let page = 1;
+let formReady = false;
 
-function isFormPage() {
-  return isPathPage("announcement-form");
-}
-
-function renderAnnouncementsTable() {
-  const items = getAllAnnouncements();
+async function renderAnnouncementsTable() {
+  const { data: items } = await listAnnouncements({ page, limit: ADMIN_PAGE_SIZE });
   const rows = items.map((item) => dataRow([
-    item.title,
-    item.duration || "-",
-    item.audio_url ? "audio selected" : "none",
+    escapeHtml(item.title),
+    item.audio_url ? "Available" : "None",
     statusBadge(item.published ? "Published" : "Draft", item.published ? "green" : "amber"),
-    `
-      <button class="announcement-status-toggle mr-3 font-medium text-slate-600" data-id="${item.id}" data-next="${!item.published}">
-        ${item.published ? "Unpublish" : "Publish"}
-      </button>
-      <a href="${withIdParam("/pages/admin/announcement-form.html", item.id)}" class="mr-3 font-medium text-royal">Edit</a>
-      <button class="announcement-delete-btn font-medium text-red-600" data-id="${item.id}">Delete</button>
-    `
+    `<button class="announcement-status-toggle mr-3 font-medium text-slate-600" data-id="${escapeHtml(item.id)}" data-next="${!item.published}">
+       ${item.published ? "Unpublish" : "Publish"}
+     </button>
+     <a href="${withIdParam("/pages/admin/announcement-form.html", item.id)}" class="mr-3 font-medium text-royal">Edit</a>
+     <button class="announcement-delete-btn font-medium text-red-600" data-id="${escapeHtml(item.id)}">Delete</button>`
   ])).join("");
-
   $("#manage-announcements-list").html(`
     ${adminPageHeader("Announcements", "", '<a href="/pages/admin/announcement-form.html" class="ce-btn-primary">Create announcement</a>')}
-    ${tableMarkup(["Title", "Duration", "Audio", "Status", "Actions"], rows)}
+    ${tableMarkup(["Title", "Audio", "Status", "Actions"], rows)}
+    ${paginationMarkup(page, items.length)}
   `);
 }
 
-function hydrateAnnouncementForm() {
+async function hydrateAnnouncementForm() {
   const id = getLocationParam("id");
-  const item = id ? getAnnouncementById(id) : null;
-  if (!item) return;
-  $("#announcement-form-title").text("Edit Announcement");
-  $("#title").val(item.title);
-  $("#duration").val(item.duration || "2:00");
-  $("#transcript").val(item.transcript || "");
-  $("#published").prop("checked", Boolean(item.published));
+  $("#audio").prop("required", !id).prop("disabled", Boolean(id));
+  if (id) {
+    const { data: item } = await getAnnouncementById(id);
+    $("#announcement-form-title").text("Edit Announcement");
+    $("#title").val(item.title);
+    $("#published").prop("checked", Boolean(item.published));
+    $("#audio-help").text("The API cannot replace existing audio. Create a new announcement to use another recording.");
+  }
+  formReady = true;
+  $("#announcement-form button[type=submit]").prop("disabled", false);
 }
 
 if (enforcePageAccess({ adminOnly: true })) {
   await loadAdminShell("../../../components", { activeAdminNav: "announcements" });
-  if (isListPage()) {
-    setLoadingState("#manage-announcements-list", true);
+  if (isPathPage("manage-announcements")) await loadAdminData("#manage-announcements-list", renderAnnouncementsTable);
+  if (isPathPage("announcement-form")) {
+    $("#announcement-form button[type=submit]").prop("disabled", true);
     try {
-      renderAnnouncementsTable();
+      await hydrateAnnouncementForm();
     } catch (error) {
-      setErrorState("#manage-announcements-list", error.message);
+      showError(error.message);
     }
   }
-  if (isFormPage()) hydrateAnnouncementForm();
 }
 
 $("#announcement-form").on("submit", (event) => {
   event.preventDefault();
-  const file = $("#audio")[0]?.files?.[0];
-  if (file) {
-    const fileValidation = validateFile(file, ["mp3", "wav", "m4a", "ogg"], 5 * 1024 * 1024);
-    if (!fileValidation.isValid) {
-      showError(fileValidation.message);
-      return;
-    }
+  if (!formReady) {
+    showError("The form has not loaded. Please reload this page.");
+    return;
   }
-
-  try {
-    const payload = {
-      title: $("#title").val().trim(),
-      duration: $("#duration").val().trim() || "2:00",
-      transcript: $("#transcript").val().trim(),
-      audio_url: file ? URL.createObjectURL(file) : "",
-      published: $("#published").is(":checked"),
-      updated_at: new Date().toISOString()
-    };
-    if (!payload.title) {
-      showError("Announcement title is required.");
+  const id = getLocationParam("id");
+  const title = $("#title").val().trim();
+  const published = $("#published").is(":checked");
+  if (!title) {
+    showError("Announcement title is required.");
+    return;
+  }
+  const payload = new FormData();
+  payload.append("title", title);
+  payload.append("published", String(published));
+  if (!id) {
+    const file = $("#audio")[0]?.files?.[0];
+    const validation = validateFile(file, ["mp3", "wav", "m4a", "ogg"], 5 * 1024 * 1024);
+    if (!validation.isValid) {
+      showError(validation.message);
       return;
     }
-    const id = getLocationParam("id");
-    if (id) {
-      if (!payload.audio_url) delete payload.audio_url;
-      updateAdminAnnouncement(id, payload);
-      showSuccess("Announcement updated.");
-    } else {
-      createAdminAnnouncement(payload);
-      showSuccess("Announcement created.");
-    }
+    payload.append("audio", file);
+  }
+  runAdminAction($(event.currentTarget).find("[type=submit]"), async () => {
+    if (id) await updateAnnouncement(id, { title, published });
+    else await createAnnouncement(payload);
     window.location.href = "/pages/admin/manage-announcements.html";
-  } catch (error) {
-    showError(error.message);
-  }
+  });
 });
 
 $(document).on("click", ".announcement-delete-btn", (event) => {
-  const id = $(event.currentTarget).data("id");
+  const button = event.currentTarget;
   openConfirmModal({
     title: "Delete announcement?",
     message: "This announcement will be removed permanently.",
     confirmLabel: "Delete",
-    onConfirm: () => {
-      deleteAdminAnnouncement(id);
+    onConfirm: () => runAdminAction(button, async () => {
+      await deleteAnnouncement($(button).attr("data-id"));
       showSuccess("Announcement deleted.");
-      renderAnnouncementsTable();
-    }
+      await loadAdminData("#manage-announcements-list", renderAnnouncementsTable);
+    })
   });
 });
 
 $(document).on("click", ".announcement-status-toggle", (event) => {
-  const id = $(event.currentTarget).data("id");
-  const next = String($(event.currentTarget).data("next")) === "true";
-  setAnnouncementPublished(id, next);
-  renderAnnouncementsTable();
+  const button = event.currentTarget;
+  runAdminAction(button, async () => {
+    const publish = $(button).attr("data-next") === "true";
+    await (publish ? publishAnnouncement : unpublishAnnouncement)($(button).attr("data-id"));
+    showSuccess(publish ? "Announcement published." : "Announcement unpublished.");
+    await loadAdminData("#manage-announcements-list", renderAnnouncementsTable);
+  });
+});
+
+$(document).on("click", ".admin-page-button", (event) => {
+  page = Number($(event.currentTarget).attr("data-page"));
+  loadAdminData("#manage-announcements-list", renderAnnouncementsTable);
 });

@@ -1,32 +1,33 @@
 import { APP_CONFIG } from "../config/config.js";
-import { clearSession, getCurrentUser, getToken, setCurrentUser, setToken } from "../utils/storage.js";
-import { createMockUser, loginWithMockCredentials } from "../mock/mock-client.js";
-import { clearMockSession, initMockStore } from "../mock/mock-store.js";
+import { login as loginRequest, signup as signupRequest } from "../services/auth.service.js";
+import { clearAuthSession, getAuthSession, isSessionAuthenticated, setAuthSession } from "./auth-state.js";
 
 export async function login(credentials) {
-  initMockStore();
-  const user = loginWithMockCredentials(credentials);
-  const token = `mock-token-${user.role}-${user.id}`;
-  setToken(token);
-  setCurrentUser(user);
+  const response = await loginRequest(credentials);
+  const token = response?.data?.token;
+  const user = response?.data?.user;
+
+  if (!token || !user) {
+    throw new Error("Invalid login response format.");
+  }
+
+  setAuthSession({ token, user });
   return user;
 }
 
 export async function signup(payload) {
-  initMockStore();
-  return createMockUser(payload);
+  return signupRequest(payload);
 }
 
 export function logout() {
-  clearSession();
-  clearMockSession();
+  clearAuthSession();
   window.location.href = APP_CONFIG.LOGIN_PAGE;
 }
 
 export function isAuthenticated() {
-  return Boolean(getToken() && getCurrentUser());
+  return isSessionAuthenticated();
 }
 
 export function getLoggedInUser() {
-  return getCurrentUser();
+  return getAuthSession().user;
 }

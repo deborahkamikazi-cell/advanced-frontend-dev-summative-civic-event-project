@@ -3,6 +3,10 @@ import { loadPublicShell } from "./_shared.js";
 import { showError, showSuccess } from "../utils/notifications.js";
 import { getCurrentUserProfile, updateCurrentUserProfile } from "../mock/mock-client.js";
 import { getRoleSafe } from "./_shared.js";
+import { getMyProfile, updateMyProfile } from "../services/users.service.js";
+import { getCurrentUser, setCurrentUser } from "../utils/storage.js";
+
+let isApiMode = false;
 
 function renderProfileCard(profile) {
   const initials = profile.full_name.split(" ").map((word) => word[0]).join("").slice(0, 2).toUpperCase();
@@ -23,7 +27,16 @@ function renderProfileCard(profile) {
 if (enforcePageAccess()) {
   await loadPublicShell("../../components");
   try {
-    const profile = getCurrentUserProfile();
+    let profile = null;
+    try {
+      const response = await getMyProfile();
+      profile = response?.data || null;
+      isApiMode = true;
+    } catch {
+      profile = getCurrentUserProfile();
+      isApiMode = false;
+    }
+
     if (!profile) {
       showError("Profile not found.");
       return;
@@ -45,10 +58,16 @@ $("#profile-form").on("submit", async (event) => {
       showError("Full name and email are required.");
       return;
     }
-    const updated = updateCurrentUserProfile({ full_name, email });
+    const updated = isApiMode
+      ? (await updateMyProfile({ full_name, email }))?.data
+      : updateCurrentUserProfile({ full_name, email });
     if (!updated) {
       showError("Could not update profile.");
       return;
+    }
+    const sessionUser = getCurrentUser();
+    if (sessionUser) {
+      setCurrentUser({ ...sessionUser, full_name: updated.full_name, email: updated.email });
     }
     $("#profile-summary").html(renderProfileCard(updated));
     showSuccess("Profile updated successfully.");

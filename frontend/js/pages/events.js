@@ -5,18 +5,33 @@ import { getEventAverageRating, getPublishedEvents, isUserRegisteredForEvent, re
 import { sectionHeader, coverGradient, starsMarkup, formatDateLabel } from "./user-ui.js";
 import { showSuccess } from "../utils/notifications.js";
 import { withIdParam } from "../utils/route.js";
+import { listEvents } from "../services/events.service.js";
+import { cancelEventRegistration, getMyRegistrations, registerForEvent as registerForEventApi } from "../services/registrations.service.js";
 
 let allEvents = [];
 let filteredEvents = [];
 let currentPage = 1;
 const PAGE_SIZE = 6;
+let registeredEventIds = new Set();
+let isApiMode = false;
+
+function normalizeEvent(event) {
+  return {
+    ...event,
+    image_url: event?.metadata?.image_url || null
+  };
+}
 
 function eventCardMarkup(event) {
-  const ratings = getEventAverageRating(event.id);
-  const registered = isUserRegisteredForEvent(event.id);
+  const ratings = isApiMode ? { average: 0, total: 0 } : getEventAverageRating(event.id);
+  const registered = isApiMode ? registeredEventIds.has(event.id) : isUserRegisteredForEvent(event.id);
+  const cover = event.image_url
+    ? `<img src="${event.image_url}" alt="${event.title}" class="h-48 w-full object-cover" loading="lazy" />`
+    : coverGradient(event.image_theme);
+
   return `
     <article class="ce-card overflow-hidden">
-      ${coverGradient(event.image_theme)}
+      ${cover}
       <div class="flex h-full flex-col gap-2 p-4">
         <h3 class="font-semibold">${event.title}</h3>
         <p class="text-sm text-slate-500">📅 ${formatDateLabel(event.starts_at)}<br />📍 ${event.location}</p>
@@ -81,7 +96,23 @@ if (enforcePageAccess()) {
   await loadPublicShell("../../components", { activeNav: "events" });
   setLoadingState("#events-list", true);
   try {
-    allEvents = getPublishedEvents();
+    try {
+      const [eventsResponse, registrationsResponse] = await Promise.all([
+        listEvents(),
+        getMyRegistrations()
+      ]);
+      allEvents = (eventsResponse?.data || []).filter((event) => event.published !== false).map(normalizeEvent);
+      registeredEventIds = new Set(
+        (registrationsResponse?.data || [])
+          .filter((registration) => registration.status === "registered")
+          .map((registration) => registration.event_id)
+      );
+      isApiMode = true;
+    } catch {
+      allEvents = getPublishedEvents();
+      isApiMode = false;
+    }
+
     const locations = Array.from(new Set(allEvents.map((event) => event.location)));
 
     $("#events-list").html(`
@@ -109,14 +140,28 @@ $(document).on("input change", "#events-search, #events-date, #events-location",
 
 $(document).on("click", ".event-register-btn", (event) => {
   const eventId = $(event.currentTarget).data("eventId");
-  if (isUserRegisteredForEvent(eventId)) {
-    cancelRegistration(eventId);
-    showSuccess("Registration cancelled.");
-  } else {
-    registerForEvent(eventId);
-    showSuccess("Registration submitted.");
-  }
-  renderEvents();
+  const handler = async () => {
+    if (isApiMode) {
+      if (registeredEventIds.has(eventId)) {
+        await cancelEventRegistration(eventId);
+        registeredEventIds.delete(eventId);
+        showSuccess("Registration cancelled.");
+      } else {
+        await registerForEventApi(eventId);
+        registeredEventIds.add(eventId);
+        showSuccess("Registration submitted.");
+      }
+    } else if (isUserRegisteredForEvent(eventId)) {
+      cancelRegistration(eventId);
+      showSuccess("Registration cancelled.");
+    } else {
+      registerForEvent(eventId);
+      showSuccess("Registration submitted.");
+    }
+    renderEvents();
+  };
+
+  handler().catch((error) => setErrorState("#events-list", error.message || "Action failed."));
 });
 
 $(document).on("click", ".page-btn", (event) => {

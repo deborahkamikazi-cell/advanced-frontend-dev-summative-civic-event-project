@@ -1,140 +1,139 @@
 import { enforcePageAccess } from "../../auth/auth-guard.js";
 import { loadAdminShell } from "../_shared.js";
-import { setErrorState, setLoadingState } from "../../utils/ui.js";
 import { validateFile } from "../../utils/validation.js";
 import { openConfirmModal, showError, showSuccess } from "../../utils/notifications.js";
-import { createAdminEvent, deleteAdminEvent, getAllEvents, getEventById, setEventPublished, updateAdminEvent } from "../../mock/mock-client.js";
-import { adminPageHeader, dataRow, formatDateLabel, formatDateTimeForInput, statusBadge, tableMarkup } from "./admin-ui.js";
+import { createEvent, deleteEvent, getEventById, listEvents, updateEvent } from "../../services/events.service.js";
+import { getEventAttendees } from "../../services/registrations.service.js";
+import { adminPageHeader, dataRow, escapeHtml, formatDateLabel, formatDateTimeForInput, loadAdminData, runAdminAction, statusBadge, tableMarkup } from "./admin-ui.js";
 import { getLocationParam, isPathPage, withIdParam } from "../../utils/route.js";
 
-function isListPage() {
-  return isPathPage("manage-events");
-}
+let previewUrl = null;
+let formReady = false;
 
-function isFormPage() {
-  return isPathPage("event-form");
-}
-
-function renderEventsTable() {
-  const events = getAllEvents();
+async function renderEventsTable() {
+  const { data: events } = await listEvents();
   const rows = events.map((event) => dataRow([
-    event.title,
-    event.location,
-    formatDateLabel(event.starts_at),
+    escapeHtml(event.title),
+    escapeHtml(event.location),
+    escapeHtml(formatDateLabel(event.starts_at)),
     statusBadge(event.published ? "Published" : "Draft", event.published ? "green" : "amber"),
-    `
-      <button class="event-status-toggle mr-3 font-medium text-slate-600" data-id="${event.id}" data-next="${!event.published}">
-        ${event.published ? "Unpublish" : "Publish"}
-      </button>
-      <a href="${withIdParam("/pages/admin/event-form.html", event.id)}" class="mr-3 font-medium text-royal">Edit</a>
-      <button class="event-delete-btn font-medium text-red-600" data-id="${event.id}">Delete</button>
-    `
+    `<button class="event-attendees-btn mr-3 font-medium text-royal" data-id="${escapeHtml(event.id)}">Registrants</button>
+     <a href="${withIdParam("/pages/admin/event-form.html", event.id)}" class="mr-3 font-medium text-royal">Edit</a>
+     <button class="event-delete-btn font-medium text-red-600" data-id="${escapeHtml(event.id)}">Delete</button>`
   ])).join("");
-
   $("#manage-events-list").html(`
-    ${adminPageHeader("Events Management", "", '<a href="/pages/admin/event-form.html" class="ce-btn-primary">Create Event</a>')}
+    ${adminPageHeader("Events Management", "Events are published on creation. Publish/unpublish controls are not supported by the API.", '<a href="/pages/admin/event-form.html" class="ce-btn-primary">Create Event</a>')}
     ${tableMarkup(["Title", "Location", "Start date", "Status", "Actions"], rows)}
+    <section id="event-attendees" class="mt-4" aria-live="polite"></section>
   `);
 }
 
-function renderImagePreview(file) {
-  const $preview = $("#event-image-preview");
-  if (!file || !$preview.length) return;
-  const objectUrl = URL.createObjectURL(file);
-  $preview.attr("src", objectUrl).removeClass("hidden");
-}
-
-function hydrateEventForm() {
+async function hydrateEventForm() {
   const eventId = getLocationParam("id");
-  const event = eventId ? getEventById(eventId) : null;
-  if (!event) return;
-
-  $("#event-form-title").text("Edit Event");
-  $("#title").val(event.title);
-  $("#description").val(event.description);
-  $("#location").val(event.location);
-  $("#starts_at").val(formatDateTimeForInput(event.starts_at));
-  $("#ends_at").val(formatDateTimeForInput(event.ends_at));
-  $("#published").prop("checked", Boolean(event.published));
-  $("#theme").val(event.image_theme || 210);
+  if (eventId) {
+    const { data: event } = await getEventById(eventId);
+    $("#event-form-title").text("Edit Event");
+    for (const field of ["title", "description", "location"]) $(`#${field}`).val(event[field]);
+    $("#starts_at").val(formatDateTimeForInput(event.starts_at));
+    $("#ends_at").val(formatDateTimeForInput(event.ends_at));
+    if (event.metadata?.image_url) $("#event-image-preview").attr("src", event.metadata.image_url).removeClass("hidden");
+  }
+  formReady = true;
+  $("#event-form button[type=submit]").prop("disabled", false);
 }
 
 if (enforcePageAccess({ adminOnly: true })) {
   await loadAdminShell("../../../components", { activeAdminNav: "events" });
-  if (isListPage()) {
-    setLoadingState("#manage-events-list", true);
+  if (isPathPage("manage-events")) await loadAdminData("#manage-events-list", renderEventsTable);
+  if (isPathPage("event-form")) {
+    $("#event-form button[type=submit]").prop("disabled", true);
     try {
-      renderEventsTable();
+      await hydrateEventForm();
     } catch (error) {
-      setErrorState("#manage-events-list", error.message);
+      showError(error.message);
     }
   }
-  if (isFormPage()) hydrateEventForm();
 }
 
 $("#image").on("change", (event) => {
-  renderImagePreview(event.currentTarget.files?.[0]);
+  const file = event.currentTarget.files?.[0];
+  if (previewUrl) URL.revokeObjectURL(previewUrl);
+  previewUrl = null;
+  $("#event-image-preview").removeAttr("src").addClass("hidden");
+  if (!file) return;
+  const validation = validateFile(file, ["jpg", "jpeg", "png", "gif"], 2 * 1024 * 1024);
+  if (!validation.isValid) {
+    event.currentTarget.value = "";
+    showError(validation.message);
+    return;
+  }
+  previewUrl = URL.createObjectURL(file);
+  $("#event-image-preview").attr("src", previewUrl).removeClass("hidden");
+});
+window.addEventListener("pagehide", () => {
+  if (previewUrl) URL.revokeObjectURL(previewUrl);
 });
 
 $("#event-form").on("submit", (event) => {
   event.preventDefault();
+  if (!formReady) {
+    showError("The form has not loaded. Please reload this page.");
+    return;
+  }
+  const payload = new FormData();
+  for (const field of ["title", "description", "location", "starts_at", "ends_at"]) {
+    payload.append(field, $(`#${field}`).val().trim());
+  }
+  if (!payload.get("title") || !payload.get("location") || !payload.get("starts_at") || !payload.get("ends_at")) {
+    showError("Please complete all required fields.");
+    return;
+  }
+  const start = new Date(payload.get("starts_at"));
+  const end = new Date(payload.get("ends_at"));
+  if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime()) || end <= start) {
+    showError("End date must be after the start date.");
+    return;
+  }
+  payload.set("starts_at", start.toISOString());
+  payload.set("ends_at", end.toISOString());
   const file = $("#image")[0]?.files?.[0];
-
   if (file) {
-    const fileValidation = validateFile(file, ["jpg", "jpeg", "png", "gif"], 2 * 1024 * 1024);
-    if (!fileValidation.isValid) {
-      showError(fileValidation.message);
+    const validation = validateFile(file, ["jpg", "jpeg", "png", "gif"], 2 * 1024 * 1024);
+    if (!validation.isValid) {
+      showError(validation.message);
       return;
     }
+    payload.append("image", file);
   }
-
-  try {
-    const payload = {
-      title: $("#title").val().trim(),
-      description: $("#description").val().trim(),
-      location: $("#location").val().trim(),
-      starts_at: $("#starts_at").val(),
-      ends_at: $("#ends_at").val(),
-      published: $("#published").is(":checked"),
-      image_theme: Number($("#theme").val() || 210)
-    };
-
-    if (!payload.title || !payload.location || !payload.starts_at || !payload.ends_at) {
-      showError("Please complete all required fields.");
-      return;
-    }
-
-    const eventId = getLocationParam("id");
-    if (eventId) {
-      updateAdminEvent(eventId, payload);
-      showSuccess("Event updated successfully.");
-    } else {
-      createAdminEvent(payload);
-      showSuccess("Event created successfully.");
-    }
+  runAdminAction($(event.currentTarget).find("[type=submit]"), async () => {
+    const id = getLocationParam("id");
+    if (id) await updateEvent(id, payload);
+    else await createEvent(payload);
     window.location.href = "/pages/admin/manage-events.html";
-  } catch (error) {
-    showError(error.message);
-  }
-});
-
-$(document).on("click", ".event-delete-btn", (event) => {
-  const eventId = $(event.currentTarget).data("id");
-  openConfirmModal({
-    title: "Delete event?",
-    message: "This will remove the event and related registrations.",
-    confirmLabel: "Delete",
-    onConfirm: () => {
-      deleteAdminEvent(eventId);
-      showSuccess("Event deleted.");
-      renderEventsTable();
-    }
   });
 });
 
-$(document).on("click", ".event-status-toggle", (event) => {
-  const eventId = $(event.currentTarget).data("id");
-  const nextState = String($(event.currentTarget).data("next")) === "true";
-  setEventPublished(eventId, nextState);
-  renderEventsTable();
+$(document).on("click", ".event-delete-btn", (event) => {
+  const button = event.currentTarget;
+  const id = $(button).attr("data-id");
+  openConfirmModal({
+    title: "Delete event?",
+    message: "This permanently deletes the event. The API may reject deletion when registrations exist.",
+    confirmLabel: "Delete",
+    onConfirm: () => runAdminAction(button, async () => {
+      await deleteEvent(id);
+      showSuccess("Event deleted.");
+      await loadAdminData("#manage-events-list", renderEventsTable);
+    })
+  });
+});
+
+$(document).on("click", ".event-attendees-btn", (event) => {
+  runAdminAction(event.currentTarget, async () => {
+    const { data } = await getEventAttendees($(event.currentTarget).attr("data-id"));
+    $("#event-attendees").html(`<h2 class="mb-3 font-semibold">Event registrants</h2>${tableMarkup(
+      ["Full name", "Email", "Status"],
+      data.map((item) => dataRow([escapeHtml(item.full_name), escapeHtml(item.email), escapeHtml(item.status)])).join("")
+    )}`);
+  });
 });

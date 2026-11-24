@@ -5,6 +5,8 @@ import { logout } from "../auth/auth.js";
 import { initMockStore } from "../mock/mock-store.js";
 import { getUserNotifications } from "../mock/mock-client.js";
 import { showError } from "../utils/notifications.js";
+import { listNotifications } from "../services/notifications.service.js";
+import { isNotificationRead, normalizeNotification } from "../utils/notification-state.js";
 
 const DEFAULT_NOTIFICATIONS = [];
 
@@ -38,6 +40,16 @@ function buildNotificationList(items = DEFAULT_NOTIFICATIONS) {
       </div>
     </a>
   `).join("");
+}
+
+async function fetchNotificationItems() {
+  try {
+    const response = await listNotifications();
+    const list = (response?.data || []).map(normalizeNotification).filter(Boolean);
+    return list.map((item) => ({ ...item, unread: !isNotificationRead(item) }));
+  } catch {
+    return getUserNotifications().map((item) => ({ ...normalizeNotification(item), unread: !isNotificationRead(item) }));
+  }
 }
 
 function bindSharedEvents() {
@@ -100,7 +112,7 @@ export async function loadPublicShell(componentBasePath, options = {}) {
   $("#profile-menu-toggle").text(initials);
   setActiveNavLink(activeNav);
 
-  const notificationItems = notifications || getUserNotifications().map((item) => ({ ...item, unread: !item.read }));
+  const notificationItems = notifications || await fetchNotificationItems();
   $("#notification-drawer-list").html(buildNotificationList(notificationItems));
   const unreadCount = notificationItems.filter((item) => item.unread).length;
   $("#notification-unread-badge").text(String(unreadCount));

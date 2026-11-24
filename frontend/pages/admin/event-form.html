@@ -44,15 +44,16 @@
           <div class="grid gap-4 sm:grid-cols-2">
             <label class="block text-sm font-medium">
               Color theme
-              <input id="theme" name="theme" type="number" min="0" max="360" step="1" value="210" class="ce-input" />
+              <input id="theme" name="theme" type="number" min="0" max="360" step="1" value="210" class="ce-input" disabled aria-describedby="event-api-note" />
             </label>
             <label class="mt-7 inline-flex items-center gap-2 text-sm">
-              <input id="published" name="published" type="checkbox" checked />
+              <input id="published" name="published" type="checkbox" checked disabled aria-describedby="event-api-note" />
               Published
             </label>
           </div>
+          <p id="event-api-note" class="text-sm text-slate-500">The API publishes new events automatically. Changing publication status and saving color themes are not supported. Upload a cover image instead.</p>
           <div class="flex gap-2">
-            <button type="submit" class="ce-btn-primary">Save event</button>
+            <button type="submit" class="ce-btn-primary" disabled>Save event</button>
             <a href="/pages/admin/manage-events.html" class="ce-btn-secondary">Cancel</a>
           </div>
         </form>

@@ -3,6 +3,7 @@ import { getPromoById } from "../mock/mock-client.js";
 import { loadPublicShell } from "./_shared.js";
 import { setErrorState } from "../utils/ui.js";
 import { getLocationParam } from "../utils/route.js";
+import { getPromoById as getPromoByIdApi } from "../services/promos.service.js";
 
 if (enforcePageAccess()) {
   await loadPublicShell("../../components", { activeNav: "promos" });
@@ -12,7 +13,14 @@ if (enforcePageAccess()) {
     setErrorState("#promo-details-content", "Missing promo id.");
   } else {
     try {
-      const promo = getPromoById(id);
+      let promo = null;
+      try {
+        const response = await getPromoByIdApi(id);
+        promo = response?.data || null;
+      } catch {
+        promo = getPromoById(id);
+      }
+
       if (!promo) {
         setErrorState("#promo-details-content", "Promo not found.");
       } else {
@@ -26,8 +34,8 @@ if (enforcePageAccess()) {
             <p class="mt-1 text-slate-600">${promo.description}</p>
             <section class="ce-card mt-4 p-4">
               <h2 class="font-semibold">Caption / transcript</h2>
-              <p class="mt-1 text-sm text-slate-600">${promo.caption_text}</p>
-              <p class="mt-2 text-sm text-slate-600">${promo.transcript}</p>
+              <p class="mt-1 text-sm text-slate-600">${promo.caption_text || "No caption text available."}</p>
+              <p class="mt-2 text-sm text-slate-600">${promo.transcript || "Transcript not available."}</p>
             </section>
           </section>
         `);
