@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Announcement Form | CivicEvents+</title>
+    <link rel="stylesheet" href="../../css/output.css" />
+  </head>
+  <body class="bg-gray-50 text-gray-900">
+    <div id="navbar-slot"></div>
+    <main class="mx-auto max-w-4xl p-4">
+      <section class="rounded border bg-white p-4">
+        <h1 class="text-xl font-semibold">Announcement Form</h1>
+        <form id="announcement-form" class="mt-4 space-y-4" enctype="multipart/form-data">
+          <input id="title" name="title" type="text" placeholder="Title" class="w-full rounded border px-3 py-2" required />
+          <input id="audio" name="audio" type="file" accept=".mp3,.wav,.m4a,.ogg" class="w-full rounded border px-3 py-2" />
+          <button type="submit" class="rounded bg-gray-900 px-4 py-2 text-sm text-white">Save announcement</button>
+        </form>
+      </section>
+    </main>
+    <div id="footer-slot"></div>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script type="module" src="../../js/pages/admin/manage-announcements.js"></script>
+  </body>
+</html>

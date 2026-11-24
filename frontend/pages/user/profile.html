@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Profile | CivicEvents+</title>
+    <link rel="stylesheet" href="../../css/output.css" />
+  </head>
+  <body class="bg-gray-50 text-gray-900">
+    <div id="navbar-slot"></div>
+    <main class="mx-auto max-w-3xl p-4">
+      <h1 class="text-xl font-semibold">My Profile</h1>
+      <form id="profile-form" class="mt-4 space-y-4 rounded border bg-white p-4">
+        <div>
+          <label for="full_name" class="mb-1 block text-sm">Full name</label>
+          <input id="full_name" name="full_name" type="text" class="w-full rounded border px-3 py-2" />
+        </div>
+        <div>
+          <label for="email" class="mb-1 block text-sm">Email</label>
+          <input id="email" name="email" type="email" class="w-full rounded border px-3 py-2" />
+        </div>
+        <button type="submit" class="rounded bg-gray-900 px-4 py-2 text-sm text-white">Update profile</button>
+      </form>
+    </main>
+    <div id="footer-slot"></div>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script type="module" src="../../js/pages/profile.js"></script>
+  </body>
+</html>

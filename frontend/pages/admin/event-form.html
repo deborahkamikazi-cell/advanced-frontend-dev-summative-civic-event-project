@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Event Form | CivicEvents+</title>
+    <link rel="stylesheet" href="../../css/output.css" />
+  </head>
+  <body class="bg-gray-50 text-gray-900">
+    <div id="navbar-slot"></div>
+    <main class="mx-auto max-w-4xl p-4">
+      <section class="rounded border bg-white p-4">
+        <h1 class="text-xl font-semibold">Event Form</h1>
+        <form id="event-form" class="mt-4 space-y-4" enctype="multipart/form-data">
+          <input id="title" name="title" type="text" placeholder="Title" class="w-full rounded border px-3 py-2" required />
+          <textarea id="description" name="description" placeholder="Description" class="w-full rounded border px-3 py-2"></textarea>
+          <input id="location" name="location" type="text" placeholder="Location" class="w-full rounded border px-3 py-2" required />
+          <input id="starts_at" name="starts_at" type="datetime-local" class="w-full rounded border px-3 py-2" required />
+          <input id="ends_at" name="ends_at" type="datetime-local" class="w-full rounded border px-3 py-2" required />
+          <input id="image" name="image" type="file" accept=".jpg,.jpeg,.png,.gif" class="w-full rounded border px-3 py-2" />
+          <button type="submit" class="rounded bg-gray-900 px-4 py-2 text-sm text-white">Save event</button>
+        </form>
+      </section>
+    </main>
+    <div id="footer-slot"></div>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script type="module" src="../../js/pages/admin/manage-events.js"></script>
+  </body>
+</html>

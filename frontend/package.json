@@ -1,0 +1,14 @@
+{
+  "name": "civicevents-plus-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "CivicEvents+ frontend scaffold",
+  "scripts": {
+    "build:css": "tailwindcss -i ./css/input.css -o ./css/output.css --minify",
+    "dev:css": "tailwindcss -i ./css/input.css -o ./css/output.css --watch",
+    "start": "npx serve ."
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.17"
+  }
+}
