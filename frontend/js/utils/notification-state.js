@@ -1,19 +1,31 @@
 import { withIdParam } from "./route.js";
+import { getCurrentUser } from "./storage.js";
 
 const READ_STATE_KEY = "civicevents_notification_read_state";
+export const NOTIFICATIONS_READ_EVENT = "civicevents:notifications-read";
+
+function readStateKey() {
+  return `${READ_STATE_KEY}:${getCurrentUser()?.id || "guest"}`;
+}
 
 function readState() {
-  const raw = localStorage.getItem(READ_STATE_KEY);
-  if (!raw) return {};
   try {
-    return JSON.parse(raw);
-  } catch {
+    const raw = localStorage.getItem(readStateKey());
+    if (!raw) return {};
+    const state = JSON.parse(raw);
+    if (!state || typeof state !== "object" || Array.isArray(state)) {
+      throw new Error("Invalid notification read state.");
+    }
+    return state;
+  } catch (error) {
+    console.warn("Unable to restore local notification read state.", error);
     return {};
   }
 }
 
 function saveState(state) {
-  localStorage.setItem(READ_STATE_KEY, JSON.stringify(state));
+  localStorage.setItem(readStateKey(), JSON.stringify(state));
+  window.dispatchEvent(new Event(NOTIFICATIONS_READ_EVENT));
 }
 
 function formatCreatedLabel(createdAt) {
@@ -33,10 +45,10 @@ function resolveRelatedUrl(item) {
 
 export function normalizeNotification(item) {
   if (!item) return null;
-  if (item.related_url) return item;
+  const type = String(item.type || "system").toLowerCase();
   return {
     id: item.id,
-    type: item.type || "System",
+    type: type.charAt(0).toUpperCase() + type.slice(1),
     title: item.title,
     message: item.message,
     created_label: item.created_label || formatCreatedLabel(item.created_at),

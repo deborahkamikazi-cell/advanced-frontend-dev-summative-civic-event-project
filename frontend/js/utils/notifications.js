@@ -18,7 +18,7 @@ function showToast(message, variant = "success") {
     return;
   }
 
-  const $toast = $(`<div class="${toastClass} rounded-lg px-4 py-2 text-sm text-white shadow-lg">${message}</div>`);
+  const $toast = $(`<div class="${toastClass} rounded-lg px-4 py-2 text-sm text-white shadow-lg" role="status"></div>`).text(message);
   $container.append($toast);
   setTimeout(() => {
     $toast.fadeOut(200, () => $toast.remove());

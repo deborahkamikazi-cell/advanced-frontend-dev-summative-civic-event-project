@@ -7,7 +7,7 @@ This frontend implements the CivicEvents+ UI using your Cloud Studio design lang
 - jQuery
 - Modular JavaScript
 
-Authentication and administrator pages use the real backend API. User pages request API data first; their existing mock fallback remains for development. Administrator actions never fall back to mock writes.
+Authentication, user pages and administrator pages use the real backend API. API failures show an error and retry controls; they never silently switch to mock data or mock writes.
 
 ## Tech Stack
 - Tailwind CSS (`css/input.css` → `css/output.css`)
@@ -103,17 +103,15 @@ Recordings are encoded as real mono PCM WAV, not renamed WebM files, and stop au
 
 Run the recording format/size tests with `node --test tests/audio-recorder.test.mjs` from `frontend/`.
 
-## How Mock Data Works
-- Persistent app data: `localStorage` key `civicevents_mock_db_v1`
-- Session auth state: `sessionStorage`
-- Mock datasets include users, events, announcements, promos, notifications, registrations, feedback, and dashboard stats.
-
-The retained development fixtures simulate:
-- Event registration/cancellation
-- Admin CRUD-style management (events, announcements, promos, notifications)
-- User enable/disable
-- Notification read state
-- Profile updates (full name/email)
+## User Integration
+- Profile loads and updates the real account's name/email. Editing is disabled until loading succeeds; failed saves retain the form values.
+- Events support local search/date/location filtering and pagination. Submit the navbar search with Enter (or the mobile Search button) to search the Events page.
+- Registration and cancellation use the API. Cancelled registrations are labelled and cannot be restored: the provided backend does not reactivate cancelled rows.
+- Feedback saves/updates your own rating and comment. Selecting stars or changing registration does not erase the comment. The user API does not expose aggregate ratings or other users' reviews, so these are not presented as zero or as your own rating.
+- Announcements have real audio controls on their list and detail pages. Announcements and promos have API-backed Previous/Next pagination. Drafts are excluded from each page, so a page can contain fewer than six published items (or none). Announcements have no total count; a full last page can be followed by an empty page with Previous available.
+- Notifications normalize backend categories. Marking items read updates the inbox, drawer and badge immediately. Read state is stored per account in this browser only, because the API has no read-status endpoint. Old unscoped development read state is not reused.
+- Promo caption text is displayed below the video. Timed subtitles and announcement/promo transcripts are unsupported by the API; no empty captions track is advertised.
+- Development fixtures remain under `js/mock/` but are not imported by the application pages.
 
 ## Authentication & Guards
 - `js/auth/auth.js`: real login/signup/logout session flow
@@ -140,8 +138,17 @@ Frontend checks improve UX; backend authorization is the actual access control.
 8. Test profile update (full name/email only).
 9. Confirm no console errors and no missing assets.
 
-## Remaining Validation
-Run the checklist against your local API with real media and both roles. Existing user-page mock fallbacks can mask API failures; mock content is not proof of a successful backend request. Full application-wide verification is Stage 6.
+## Automated Checks
+Run `npm test` from `frontend/` for the WAV recording tests, browser-module syntax validation and notification category/account-isolation regression tests. Run `npm run build:css` after changing Tailwind classes.
+
+Run the manual checklist against your local API with real media and both roles before submission. Backend-limited features listed above cannot be completed by frontend changes alone.
+
+### User-page checks performed
+- Real API: profile save/reload; registration and cancellation; feedback create/update/reload; inline announcement audio playback; uploaded H.264 promo playback and caption text.
+- Notifications: all category filters, mark-all-read badge/drawer synchronization, read persistence, account isolation and marking a drawer link read before navigation.
+- Controlled test responses in a disposable browser tab: error/retry recovery on all ten user pages, drawer retry, failed profile/feedback saves preserving drafts, and both media lists' pagination (including a full page of unpublished announcements).
+- Access checks: normal users redirected away from admin pages, API 403 displayed, and a real invalid-token 401 cleared the session and redirected to login.
+- All ten user pages checked at 390px and 1280px with no page-level horizontal overflow. Five automated tests and the Tailwind build passed; Node module-detection and outdated Browserslist warnings are non-blocking.
 
 ### Stage 5 checks performed
 - JavaScript syntax checks, editor diagnostics and the Tailwind production build passed.

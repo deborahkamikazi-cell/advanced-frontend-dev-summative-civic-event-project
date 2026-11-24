@@ -1,10 +1,9 @@
 import { enforcePageAccess } from "../auth/auth-guard.js";
 import { loadPublicShell } from "./_shared.js";
-import { setEmptyState, setErrorState, setLoadingState } from "../utils/ui.js";
-import { getEventAverageRating, getPublishedEvents, isUserRegisteredForEvent, registerForEvent, cancelRegistration } from "../mock/mock-client.js";
-import { sectionHeader, coverGradient, starsMarkup, formatDateLabel } from "./user-ui.js";
+import { setEmptyState } from "../utils/ui.js";
+import { sectionHeader, coverGradient, formatDateLabel, escapeHtml, loadUserData, runUserAction } from "./user-ui.js";
 import { showSuccess } from "../utils/notifications.js";
-import { withIdParam } from "../utils/route.js";
+import { getLocationParam, withIdParam } from "../utils/route.js";
 import { listEvents } from "../services/events.service.js";
 import { cancelEventRegistration, getMyRegistrations, registerForEvent as registerForEventApi } from "../services/registrations.service.js";
 
@@ -12,8 +11,7 @@ let allEvents = [];
 let filteredEvents = [];
 let currentPage = 1;
 const PAGE_SIZE = 6;
-let registeredEventIds = new Set();
-let isApiMode = false;
+let registrationStatuses = new Map();
 
 function normalizeEvent(event) {
   return {
@@ -23,24 +21,25 @@ function normalizeEvent(event) {
 }
 
 function eventCardMarkup(event) {
-  const ratings = isApiMode ? { average: 0, total: 0 } : getEventAverageRating(event.id);
-  const registered = isApiMode ? registeredEventIds.has(event.id) : isUserRegisteredForEvent(event.id);
+  const status = registrationStatuses.get(event.id);
+  const registered = status === "registered";
+  const cancelled = status === "cancelled";
   const cover = event.image_url
-    ? `<img src="${event.image_url}" alt="${event.title}" class="h-48 w-full object-cover" loading="lazy" />`
+    ? `<img src="${escapeHtml(event.image_url)}" alt="${escapeHtml(event.title)}" class="h-48 w-full object-cover" loading="lazy" />`
     : coverGradient(event.image_theme);
 
   return `
     <article class="ce-card overflow-hidden">
       ${cover}
       <div class="flex h-full flex-col gap-2 p-4">
-        <h3 class="font-semibold">${event.title}</h3>
-        <p class="text-sm text-slate-500">📅 ${formatDateLabel(event.starts_at)}<br />📍 ${event.location}</p>
-        <p class="text-sm text-slate-600">${event.description}</p>
-        <p class="text-sm">${starsMarkup(ratings.average)} <span class="text-slate-500">(${ratings.total})</span></p>
+        <h3 class="font-semibold">${escapeHtml(event.title)}</h3>
+        <p class="text-sm text-slate-500">📅 ${formatDateLabel(event.starts_at)}<br />📍 ${escapeHtml(event.location)}</p>
+        <p class="text-sm text-slate-600">${escapeHtml(event.description)}</p>
+        <p class="text-xs text-slate-500">${cancelled ? "The current API cannot restore a cancelled registration." : "Average ratings are not provided by the current API."}</p>
         <div class="mt-auto flex gap-2 pt-2">
           <a href="${withIdParam("/pages/user/event-details.html", event.id)}" class="ce-btn-secondary flex-1 text-center">View Details</a>
-          <button class="${registered ? "ce-btn-danger" : "ce-btn-primary"} event-register-btn" data-event-id="${event.id}">
-            ${registered ? "Cancel" : "Register"}
+          <button class="${registered ? "ce-btn-danger" : "ce-btn-primary"} event-register-btn" data-event-id="${event.id}" ${cancelled ? "disabled" : ""}>
+            ${cancelled ? "Cancelled" : registered ? "Cancel" : "Register"}
           </button>
         </div>
       </div>
@@ -92,26 +91,17 @@ function renderEvents() {
   $("#events-pagination").html(buildPaginationMarkup(totalPages));
 }
 
-if (enforcePageAccess()) {
-  await loadPublicShell("../../components", { activeNav: "events" });
-  setLoadingState("#events-list", true);
-  try {
-    try {
+async function loadEvents() {
+  await loadUserData("#events-list", async () => {
+    const search = $("#events-search").val() ?? getLocationParam("q") ?? "";
       const [eventsResponse, registrationsResponse] = await Promise.all([
         listEvents(),
         getMyRegistrations()
       ]);
       allEvents = (eventsResponse?.data || []).filter((event) => event.published !== false).map(normalizeEvent);
-      registeredEventIds = new Set(
-        (registrationsResponse?.data || [])
-          .filter((registration) => registration.status === "registered")
-          .map((registration) => registration.event_id)
+      registrationStatuses = new Map(
+        registrationsResponse.data.map((registration) => [registration.event_id, registration.status])
       );
-      isApiMode = true;
-    } catch {
-      allEvents = getPublishedEvents();
-      isApiMode = false;
-    }
 
     const locations = Array.from(new Set(allEvents.map((event) => event.location)));
 
@@ -122,46 +112,39 @@ if (enforcePageAccess()) {
         <input id="events-date" type="date" aria-label="Filter by date" class="ce-input" />
         <select id="events-location" aria-label="Filter by location" class="ce-input">
           <option value="all">All locations</option>
-          ${locations.map((location) => `<option value="${location}">${location}</option>`).join("")}
+          ${locations.map((location) => `<option value="${escapeHtml(location)}">${escapeHtml(location)}</option>`).join("")}
         </select>
       </section>
       <section id="events-results" class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3"></section>
       <section id="events-pagination"></section>
     `);
 
-    filteredEvents = allEvents;
-    renderEvents();
-  } catch (error) {
-    setErrorState("#events-list", error.message);
-  }
+    $("#events-search").val(search);
+    applyFilters();
+  });
+}
+
+if (enforcePageAccess()) {
+  await loadPublicShell("../../components", { activeNav: "events" });
+  await loadEvents();
 }
 
 $(document).on("input change", "#events-search, #events-date, #events-location", applyFilters);
 
 $(document).on("click", ".event-register-btn", (event) => {
   const eventId = $(event.currentTarget).data("eventId");
-  const handler = async () => {
-    if (isApiMode) {
-      if (registeredEventIds.has(eventId)) {
+  runUserAction(event.currentTarget, async () => {
+      if (registrationStatuses.get(eventId) === "registered") {
         await cancelEventRegistration(eventId);
-        registeredEventIds.delete(eventId);
+        registrationStatuses.set(eventId, "cancelled");
         showSuccess("Registration cancelled.");
       } else {
         await registerForEventApi(eventId);
-        registeredEventIds.add(eventId);
+        registrationStatuses.set(eventId, "registered");
         showSuccess("Registration submitted.");
       }
-    } else if (isUserRegisteredForEvent(eventId)) {
-      cancelRegistration(eventId);
-      showSuccess("Registration cancelled.");
-    } else {
-      registerForEvent(eventId);
-      showSuccess("Registration submitted.");
-    }
     renderEvents();
-  };
-
-  handler().catch((error) => setErrorState("#events-list", error.message || "Action failed."));
+  });
 });
 
 $(document).on("click", ".page-btn", (event) => {

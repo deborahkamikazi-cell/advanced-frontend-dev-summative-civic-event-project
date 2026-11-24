@@ -15,7 +15,10 @@
       <a data-nav-key="admin" data-admin-link href="/pages/admin/dashboard.html" class="hidden rounded-lg bg-amber px-3 py-2 text-sm font-semibold text-navy">Admin Dashboard</a>
     </nav>
 
-    <input type="search" aria-label="Search" placeholder="Search events…" class="ml-auto hidden w-56 rounded-lg border border-slate-300 px-3 py-1.5 text-sm md:block" />
+    <form class="ml-auto hidden md:block" data-event-search role="search">
+      <input name="q" type="search" aria-label="Search events" placeholder="Search events…" class="w-56 rounded-lg border border-slate-300 px-3 py-1.5 text-sm" />
+      <button type="submit" class="sr-only">Search events</button>
+    </form>
 
     <div class="ml-auto flex items-center gap-2 md:ml-2">
       <button id="notification-toggle" class="relative rounded-lg p-2 hover:bg-slate-100" aria-label="Open notifications drawer">
@@ -42,7 +45,10 @@
       <a data-nav-key="announcements" href="/pages/user/announcements.html" class="rounded-lg px-3 py-2 text-sm font-medium hover:bg-slate-100">Announcements</a>
       <a data-nav-key="promos" href="/pages/user/promos.html" class="rounded-lg px-3 py-2 text-sm font-medium hover:bg-slate-100">Promos</a>
       <a data-nav-key="admin" data-admin-link href="/pages/admin/dashboard.html" class="hidden rounded-lg bg-amber px-3 py-2 text-sm font-semibold text-navy">Admin Dashboard</a>
-      <input type="search" placeholder="Search events…" class="ce-input mt-2" />
+      <form data-event-search role="search">
+        <input name="q" type="search" aria-label="Search events" placeholder="Search events…" class="ce-input mt-2" />
+        <button type="submit" class="ce-btn-secondary mt-2">Search events</button>
+      </form>
     </div>
   </nav>
 </header>

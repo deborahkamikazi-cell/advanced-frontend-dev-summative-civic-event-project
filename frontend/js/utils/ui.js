@@ -1,4 +1,5 @@
 import { showError } from "./notifications.js";
+import { escapeHtml } from "./formatters.js";
 
 export function setLoadingState(targetSelector, isLoading, message = "Loading...") {
   const $target = $(targetSelector);
@@ -15,10 +16,14 @@ export function setEmptyState(targetSelector, message = "No data found.") {
   $target.html(`<div class="p-4 text-sm text-gray-500">${message}</div>`);
 }
 
-export function setErrorState(targetSelector, message = "An error occurred.") {
+export function setErrorState(targetSelector, message = "An error occurred.", retry = null) {
   const $target = $(targetSelector);
   if (!$target.length) return;
-  $target.html(`<div class="p-4 text-sm text-red-600">${message}</div>`);
+  $target.html(`<div class="p-4 text-sm text-red-600" role="alert">${escapeHtml(message)}</div>`);
+  if (retry) {
+    $("<button>", { type: "button", class: "ce-btn-secondary", text: "Retry" })
+      .one("click", retry).appendTo($target);
+  }
 }
 
 export function loadComponent(targetSelector, componentPath) {

@@ -1,3 +1,8 @@
+import { setErrorState, setLoadingState } from "../utils/ui.js";
+import { showError } from "../utils/notifications.js";
+
+export { escapeHtml } from "../utils/formatters.js";
+
 export function formatDateLabel(value) {
   const date = new Date(value);
   return date.toLocaleString([], {
@@ -23,7 +28,8 @@ export function starsMarkup(rating) {
 }
 
 export function coverGradient(theme = 210, classes = "h-40") {
-  return `<div class="${classes} flex items-end p-3 text-3xl text-white" style="background:linear-gradient(135deg,hsl(${theme} 70% 30%),hsl(${theme + 35} 80% 55%))" role="img" aria-label="Event photo placeholder">🏛️</div>`;
+  const hue = Number.isFinite(Number(theme)) ? Number(theme) : 210;
+  return `<div class="${classes} flex items-end p-3 text-3xl text-white" style="background:linear-gradient(135deg,hsl(${hue} 70% 30%),hsl(${hue + 35} 80% 55%))" role="img" aria-label="Event photo placeholder">🏛️</div>`;
 }
 
 export function sectionHeader(title, subtitle = "", extra = "") {
@@ -36,4 +42,36 @@ export function sectionHeader(title, subtitle = "", extra = "") {
       ${extra}
     </div>
   `;
+}
+
+export const USER_PAGE_SIZE = 6;
+
+export async function loadUserData(target, render) {
+  setLoadingState(target, true);
+  try {
+    await render();
+  } catch (error) {
+    setErrorState(target, error.message || "Unable to load data.", () => loadUserData(target, render));
+  }
+}
+
+export async function runUserAction(button, action) {
+  const $button = $(button);
+  if ($button.prop("disabled")) return;
+  $button.prop("disabled", true).attr("aria-busy", "true");
+  try {
+    await action();
+  } catch (error) {
+    showError(error.message || "The request failed. Please try again.");
+  } finally {
+    $button.prop("disabled", false).removeAttr("aria-busy");
+  }
+}
+
+export function paginationMarkup(page, hasNext) {
+  return `<nav class="mt-6 flex items-center justify-center gap-3" aria-label="Pagination">
+    <button type="button" class="ce-btn-secondary user-page-button" data-page="${page - 1}" ${page === 1 ? "disabled" : ""}>Previous</button>
+    <span class="text-sm" aria-current="page">Page ${page}</span>
+    <button type="button" class="ce-btn-secondary user-page-button" data-page="${page + 1}" ${hasNext ? "" : "disabled"}>Next</button>
+  </nav>`;
 }

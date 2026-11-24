@@ -1,12 +1,9 @@
 import { formatDateLabel, sectionHeader } from "../user-ui.js";
 import { showError } from "../../utils/notifications.js";
 import { setLoadingState } from "../../utils/ui.js";
+import { escapeHtml } from "../../utils/formatters.js";
 
-export function escapeHtml(value = "") {
-  return String(value ?? "").replace(/[&<>"']/g, (character) => ({
-    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
-  })[character]);
-}
+export { escapeHtml };
 
 export async function runAdminAction(button, action) {
   const $button = $(button);

@@ -2,13 +2,12 @@ import { APP_CONFIG } from "../config/config.js";
 import { getCurrentUser } from "../utils/storage.js";
 import { loadComponent } from "../utils/ui.js";
 import { logout } from "../auth/auth.js";
-import { initMockStore } from "../mock/mock-store.js";
-import { getUserNotifications } from "../mock/mock-client.js";
 import { showError } from "../utils/notifications.js";
 import { listNotifications } from "../services/notifications.service.js";
-import { isNotificationRead, normalizeNotification } from "../utils/notification-state.js";
+import { isNotificationRead, markNotificationReadLocal, normalizeNotification, NOTIFICATIONS_READ_EVENT } from "../utils/notification-state.js";
+import { escapeHtml, loadUserData } from "./user-ui.js";
 
-const DEFAULT_NOTIFICATIONS = [];
+let notificationItems = [];
 
 function ensureRoot(id) {
   if (!document.getElementById(id)) {
@@ -28,28 +27,34 @@ function setActiveAdminNavLink(adminNavKey) {
   $(`[data-admin-nav-key="${adminNavKey}"]`).addClass("bg-royal font-semibold");
 }
 
-function buildNotificationList(items = DEFAULT_NOTIFICATIONS) {
+function buildNotificationList(items) {
+  if (!items.length) return '<p class="p-3 text-sm text-slate-500">No notifications yet.</p>';
   return items.map((item) => `
-    <a href="${item.related_url || item.href}" class="block rounded-lg p-3 text-sm hover:bg-slate-50">
+    <a href="${escapeHtml(item.related_url)}" data-drawer-notification-id="${escapeHtml(item.id)}" class="block rounded-lg p-3 text-sm hover:bg-slate-50">
       <div class="flex items-start gap-2">
         <span class="mt-1 h-2 w-2 rounded-full ${item.unread ? "bg-royal" : "bg-slate-300"}"></span>
         <span>
-          <b>${item.title}</b><br />
-          <span class="text-slate-500">${item.message}</span>
+          <b>${escapeHtml(item.title)}</b><br />
+          <span class="text-slate-500">${escapeHtml(item.message)}</span>
         </span>
       </div>
     </a>
   `).join("");
 }
 
+export function updateNotificationShell(items = notificationItems) {
+  notificationItems = items;
+  const withReadState = items.map((item) => ({ ...item, unread: !isNotificationRead(item) }));
+  $("#notification-drawer-list").html(buildNotificationList(withReadState));
+  $("#notification-unread-badge").text(String(withReadState.filter((item) => item.unread).length));
+}
+
 async function fetchNotificationItems() {
-  try {
+  $("#notification-unread-badge").text("!");
+  await loadUserData("#notification-drawer-list", async () => {
     const response = await listNotifications();
-    const list = (response?.data || []).map(normalizeNotification).filter(Boolean);
-    return list.map((item) => ({ ...item, unread: !isNotificationRead(item) }));
-  } catch {
-    return getUserNotifications().map((item) => ({ ...normalizeNotification(item), unread: !isNotificationRead(item) }));
-  }
+    updateNotificationShell(response.data.map(normalizeNotification).filter(Boolean));
+  });
 }
 
 function bindSharedEvents() {
@@ -69,7 +74,16 @@ function bindSharedEvents() {
   });
   $(document).on("click.shared-ui", "#notification-toggle", () => $("#notification-drawer-overlay").removeClass("hidden"));
   $(document).on("click.shared-ui", "#notification-drawer-close", () => $("#notification-drawer-overlay").addClass("hidden"));
-  $(document).on("click.shared-ui", "#notification-drawer-panel a", () => $("#notification-drawer-overlay").addClass("hidden"));
+  $(document).on("click.shared-ui", "#notification-drawer-panel a", (event) => {
+    const id = $(event.currentTarget).attr("data-drawer-notification-id");
+    try {
+      if (id) markNotificationReadLocal(id);
+    } catch (error) {
+      event.preventDefault();
+      showError(`Unable to save notification read status: ${error.message}`);
+    }
+    $("#notification-drawer-overlay").addClass("hidden");
+  });
   $(document).on("click.shared-ui", "#notification-drawer-overlay", (event) => {
     if (event.target.id === "notification-drawer-overlay") {
       $("#notification-drawer-overlay").addClass("hidden");
@@ -84,7 +98,14 @@ function bindSharedEvents() {
     $("#admin-sidebar-scrim").addClass("hidden");
   });
   $(document).on("click.shared-ui", "#logout-button", () => logout());
+  $(document).off("submit.shared-ui").on("submit.shared-ui", "[data-event-search]", (event) => {
+    event.preventDefault();
+    const query = encodeURIComponent($(event.currentTarget).find("[name=q]").val().trim());
+    window.location.href = `/pages/user/events.html?q=${query}#q=${query}`;
+  });
 }
+
+window.addEventListener(NOTIFICATIONS_READ_EVENT, () => updateNotificationShell());
 
 async function loadGlobalComponents(componentBasePath) {
   ensureRoot("notification-drawer-root");
@@ -98,7 +119,6 @@ async function loadGlobalComponents(componentBasePath) {
 
 export async function loadPublicShell(componentBasePath, options = {}) {
   const { activeNav = "", notifications = null } = options;
-  initMockStore();
   await loadComponent("#navbar-slot", `${componentBasePath}/navbar.html`);
   await loadComponent("#footer-slot", `${componentBasePath}/footer.html`);
   await loadGlobalComponents(componentBasePath);
@@ -112,11 +132,12 @@ export async function loadPublicShell(componentBasePath, options = {}) {
   $("#profile-menu-toggle").text(initials);
   setActiveNavLink(activeNav);
 
-  const notificationItems = notifications || await fetchNotificationItems();
-  $("#notification-drawer-list").html(buildNotificationList(notificationItems));
-  const unreadCount = notificationItems.filter((item) => item.unread).length;
-  $("#notification-unread-badge").text(String(unreadCount));
   bindSharedEvents();
+  if (notifications) {
+    updateNotificationShell(notifications.map(normalizeNotification).filter(Boolean));
+  } else {
+    await fetchNotificationItems();
+  }
 
   const deniedMessage = sessionStorage.getItem("civicevents_access_denied");
   if (deniedMessage) {
@@ -127,7 +148,6 @@ export async function loadPublicShell(componentBasePath, options = {}) {
 
 export async function loadAdminShell(componentBasePath, options = {}) {
   const { activeAdminNav = "" } = options;
-  initMockStore();
   await loadComponent("#footer-slot", `${componentBasePath}/footer.html`);
   await loadGlobalComponents(componentBasePath);
   await loadComponent("#admin-topbar-slot", `${componentBasePath}/admin-topbar.html`);
